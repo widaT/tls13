@@ -509,7 +509,7 @@ func (c *Conn) readRecordOrCCS(expectChangeCipherSpec bool) error {
 		c.rawInput = c.conn.BufferPoint()
 	} */
 	hdr := c.conn.Bytes()
-	if len(hdr) < 1 {
+	if len(hdr) < recordHeaderLen {
 		return nil
 	}
 	typ := recordType(hdr[0])
