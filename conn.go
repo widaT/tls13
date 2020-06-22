@@ -20,11 +20,13 @@ import (
 )
 
 type TLS13Conn interface {
-	Shift(int)
+	//get buffered bytes
 	Bytes() []byte
+	//move read point forward
+	Shift(int)
+	//write bytes to client like net.Conn wirte
 	Write([]byte) (int, error)
 	Close() error
-	Len() int
 }
 
 type Handshaker interface {
@@ -959,7 +961,7 @@ func (c *Conn) Read(b []byte) (int, error) {
 	}
 
 	n, _ := c.input.Read(b)
-	if n != 0 && c.input.Len() == 0 && c.conn.Len() > 0 &&
+	if n != 0 && c.input.Len() == 0 && len(c.conn.Bytes()) > 0 &&
 		recordType(c.conn.Bytes()[0]) == recordTypeAlert {
 		if err := c.readRecord(); err != nil {
 			return n, err // will be io.EOF on closeNotify
