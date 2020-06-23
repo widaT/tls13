@@ -485,10 +485,6 @@ func (c *Conn) readRecord() error {
 	return c.readRecordOrCCS(false)
 }
 
-func (c *Conn) readChangeCipherSpec() error {
-	return c.readRecordOrCCS(true)
-}
-
 // readRecordOrCCS reads one or more TLS records from the connection and
 // updates the record layer state. Some invariants:
 //   * c.in must be locked
@@ -507,18 +503,15 @@ func (c *Conn) readRecordOrCCS(expectChangeCipherSpec bool) error {
 	}
 	handshakeComplete := c.handshakeComplete()
 
-	/* 	if c.rawInput == nil {
-		c.rawInput = c.conn.BufferPoint()
-	} */
 	hdr := c.conn.Bytes()
 	if len(hdr) < recordHeaderLen {
-		return nil
+		return StatusPartial
 	}
 	typ := recordType(hdr[0])
 	vers := uint16(hdr[1])<<8 | uint16(hdr[2])
 	n := int(hdr[3])<<8 | int(hdr[4])
 	if len(hdr) < recordHeaderLen+n {
-		return io.EOF
+		return StatusPartial
 	}
 
 	if !handshakeComplete && typ == 0x80 {
