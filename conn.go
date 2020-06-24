@@ -17,6 +17,8 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+
+	buf "github.com/widaT/linkedbuf"
 )
 
 type TLS13Conn interface {
@@ -98,11 +100,11 @@ type Conn struct {
 	// input/output
 	in, out halfConn
 	//	rawInput  *buf.LinkedBuffer // raw input, starting with a record header
-	input     bytes.Reader // application data waiting to be read, from rawInput.Next
-	hand      bytes.Buffer // handshake data waiting to be read
-	outBuf    []byte       // scratch buffer used by out.encrypt
-	buffering bool         // whether records are buffered in sendBuf
-	sendBuf   []byte       // a buffer of records waiting to be sent
+	input     *buf.LinkedBuffer //bytes.Reader // application data waiting to be read, from rawInput.Next
+	hand      bytes.Buffer      // handshake data waiting to be read
+	outBuf    []byte            // scratch buffer used by out.encrypt
+	buffering bool              // whether records are buffered in sendBuf
+	sendBuf   []byte            // a buffer of records waiting to be sent
 
 	// bytesSent counts the bytes of application data sent.
 	// packetsSent counts packets.
@@ -597,7 +599,7 @@ func (c *Conn) readRecordOrCCS(expectChangeCipherSpec bool) error {
 		// Note that data is owned by c.rawInput, following the Next call above,
 		// to avoid copying the plaintext. This is safe because c.rawInput is
 		// not read from or written to until c.input is drained.
-		c.input.Reset(data)
+		c.input.Write(data)
 
 	case recordTypeHandshake:
 		if len(data) == 0 || expectChangeCipherSpec {
@@ -947,14 +949,14 @@ func (c *Conn) Read(b []byte) (int, error) {
 	c.in.Lock()
 	defer c.in.Unlock()
 
-	for c.input.Len() == 0 {
+	for c.input.Buffered() == 0 {
 		if err := c.readRecord(); err != nil {
 			return 0, err
 		}
 	}
 
 	n, _ := c.input.Read(b)
-	if n != 0 && c.input.Len() == 0 && len(c.conn.Bytes()) > 0 &&
+	if n != 0 && c.input.Buffered() == 0 && len(c.conn.Bytes()) > 0 &&
 		recordType(c.conn.Bytes()[0]) == recordTypeAlert {
 		if err := c.readRecord(); err != nil {
 			return n, err // will be io.EOF on closeNotify
