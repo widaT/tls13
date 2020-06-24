@@ -949,6 +949,9 @@ func (c *Conn) Read(b []byte) (int, error) {
 	c.in.Lock()
 	defer c.in.Unlock()
 
+	if c.input == nil {
+		c.input = buf.New()
+	}
 	for c.input.Buffered() == 0 {
 		if err := c.readRecord(); err != nil {
 			return 0, err
@@ -964,6 +967,84 @@ func (c *Conn) Read(b []byte) (int, error) {
 	}
 
 	return n, nil
+}
+
+func (c *Conn) Bytes() ([]byte, int, error) {
+	if err := c.Handshake(); err != nil {
+		return nil, 0, err
+	}
+
+	c.in.Lock()
+	defer c.in.Unlock()
+
+	if c.input == nil {
+		c.input = buf.New()
+	}
+	for {
+		if err := c.readRecord(); err != nil {
+			if err == StatusPartial {
+				break
+			}
+			return nil, 0, err
+		}
+	}
+
+	b, n := c.input.Bytes()
+	if n == 0 {
+		return nil, 0, StatusPartial
+	}
+	if n != 0 && len(c.conn.Bytes()) > 0 &&
+		recordType(c.conn.Bytes()[0]) == recordTypeAlert {
+		if err := c.readRecord(); err != nil {
+			return nil, 0, err // will be io.EOF on closeNotify
+		}
+	}
+	return b, n, nil
+}
+
+func (c *Conn) ReadN(n int) ([]byte, int, error) {
+	if n == 0 {
+		return nil, 0, errors.New("wrong params")
+	}
+	if err := c.Handshake(); err != nil {
+		return nil, 0, err
+	}
+	c.in.Lock()
+	defer c.in.Unlock()
+
+	if c.input == nil {
+		c.input = buf.New()
+	}
+	for {
+		if c.input.Buffered() > n {
+			break
+		}
+		if err := c.readRecord(); err != nil {
+			if err == StatusPartial {
+				break
+			}
+			return nil, 0, err
+		}
+	}
+
+	b, n := c.input.ReadN(n)
+	if n == 0 {
+		return nil, 0, StatusPartial
+	}
+	if n != 0 && len(c.conn.Bytes()) > 0 &&
+		recordType(c.conn.Bytes()[0]) == recordTypeAlert {
+		if err := c.readRecord(); err != nil {
+			return nil, 0, err // will be io.EOF on closeNotify
+		}
+	}
+	return b, n, nil
+}
+
+func (c *Conn) Shift(n int) {
+	if c.input == nil {
+		return
+	}
+	c.input.Shift(n)
 }
 
 // Close closes the connection.

@@ -2,6 +2,10 @@ github.com/widaT/linkedbuf v0.0.0-20200624031127-eac379171d09 h1:IEkno87eiF7oN1v
 github.com/widaT/linkedbuf v0.0.0-20200624031127-eac379171d09/go.mod h1:cnRYqTcnIiY0d0BNB2L0EcTrWCUfYlWkOJGBlY5eXUM=
 github.com/widaT/linkedbuf v0.0.0-20200624042509-4deaa1a3ea68 h1:GH8rOHcnla08NC563nr+5vW3xW0U6TADRNARJvkHvZE=
 github.com/widaT/linkedbuf v0.0.0-20200624042509-4deaa1a3ea68/go.mod h1:cnRYqTcnIiY0d0BNB2L0EcTrWCUfYlWkOJGBlY5eXUM=
+github.com/widaT/linkedbuf v0.0.0-20200624063829-926f6f530857 h1:uFFHJrtEnMfnZUqWOlThehzR2iPTE7AodQaQY7C5K7c=
+github.com/widaT/linkedbuf v0.0.0-20200624063829-926f6f530857/go.mod h1:cnRYqTcnIiY0d0BNB2L0EcTrWCUfYlWkOJGBlY5eXUM=
+github.com/widaT/linkedbuf v0.0.0-20200624064804-50a5736183d3 h1:GYBkpLEk8dPxsi63vQn4z5qDHdqQt7Mwyw6G49SrVu4=
+github.com/widaT/linkedbuf v0.0.0-20200624064804-50a5736183d3/go.mod h1:cnRYqTcnIiY0d0BNB2L0EcTrWCUfYlWkOJGBlY5eXUM=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 h1:psW17arqaxU48Z5kZ0CQnkZWQJsqcURM6tKiBApRjXI=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
