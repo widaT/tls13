@@ -512,10 +512,6 @@ func (c *Conn) readRecordOrCCS(expectChangeCipherSpec bool) error {
 	typ := recordType(hdr[0])
 	vers := uint16(hdr[1])<<8 | uint16(hdr[2])
 	n := int(hdr[3])<<8 | int(hdr[4])
-	if len(hdr) < recordHeaderLen+n {
-		return StatusPartial
-	}
-
 	if !handshakeComplete && typ == 0x80 {
 		c.sendAlert(alertProtocolVersion)
 		return c.in.setErrorLocked(c.newRecordHeaderError(nil, "unsupported SSLv2 handshake received"))
@@ -537,6 +533,9 @@ func (c *Conn) readRecordOrCCS(expectChangeCipherSpec bool) error {
 		return c.in.setErrorLocked(c.newRecordHeaderError(nil, msg))
 	}
 
+	if len(hdr) < recordHeaderLen+n {
+		return StatusPartial
+	}
 	//move buffer offset
 	c.conn.Shift(recordHeaderLen + n)
 
