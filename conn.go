@@ -23,12 +23,13 @@ import (
 
 type TLS13Conn interface {
 	//get buffered bytes
-	Bytes() []byte
+	Bytes() ([]byte, error)
 	//move read point forward
 	Shift(int)
 	//write bytes to client like net.Conn wirte
 	Write([]byte) (int, error)
 	Close() error
+	RemoteAddr() net.Addr
 }
 
 type Handshaker interface {
@@ -479,8 +480,21 @@ func (e RecordHeaderError) Error() string { return "tls: " + e.Msg }
 func (c *Conn) newRecordHeaderError(conn TLS13Conn, msg string) (err RecordHeaderError) {
 	err.Msg = msg
 	err.Conn = conn
-	copy(err.RecordHeader[:], c.conn.Bytes())
+
+	buf, _ := c.conn.Bytes()
+	copy(err.RecordHeader[:], buf)
 	return err
+}
+
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.conn.RemoteAddr()
+}
+
+func (c *Conn) Buffered() int {
+	if c.input == nil {
+		return 0
+	}
+	return c.input.Buffered()
 }
 
 func (c *Conn) readRecord() error {
@@ -505,7 +519,10 @@ func (c *Conn) readRecordOrCCS(expectChangeCipherSpec bool) error {
 	}
 	handshakeComplete := c.handshakeComplete()
 
-	hdr := c.conn.Bytes()
+	hdr, err := c.conn.Bytes()
+	if err != nil {
+		return err
+	}
 	if len(hdr) < recordHeaderLen {
 		return StatusPartial
 	}
@@ -958,8 +975,10 @@ func (c *Conn) Read(b []byte) (int, error) {
 	}
 
 	n, _ := c.input.Read(b)
-	if n != 0 && c.input.Buffered() == 0 && len(c.conn.Bytes()) > 0 &&
-		recordType(c.conn.Bytes()[0]) == recordTypeAlert {
+
+	buf, _ := c.conn.Bytes()
+	if n != 0 && c.input.Buffered() == 0 && len(buf) > 0 &&
+		recordType(buf[0]) == recordTypeAlert {
 		if err := c.readRecord(); err != nil {
 			return n, err // will be io.EOF on closeNotify
 		}
@@ -968,9 +987,9 @@ func (c *Conn) Read(b []byte) (int, error) {
 	return n, nil
 }
 
-func (c *Conn) Bytes() ([]byte, int, error) {
+func (c *Conn) Bytes() []byte {
 	if err := c.Handshake(); err != nil {
-		return nil, 0, err
+		return nil
 	}
 
 	c.in.Lock()
@@ -984,21 +1003,23 @@ func (c *Conn) Bytes() ([]byte, int, error) {
 			if err == StatusPartial {
 				break
 			}
-			return nil, 0, err
+			return nil
 		}
 	}
 
 	b, n := c.input.Bytes()
 	if n == 0 {
-		return nil, 0, StatusPartial
+		return nil
 	}
-	if n != 0 && len(c.conn.Bytes()) > 0 &&
-		recordType(c.conn.Bytes()[0]) == recordTypeAlert {
+
+	buf, _ := c.conn.Bytes()
+	if n != 0 && len(buf) > 0 &&
+		recordType(buf[0]) == recordTypeAlert {
 		if err := c.readRecord(); err != nil {
-			return nil, 0, err // will be io.EOF on closeNotify
+			return nil
 		}
 	}
-	return b, n, nil
+	return b
 }
 
 func (c *Conn) ReadN(n int) ([]byte, int, error) {
@@ -1030,10 +1051,11 @@ func (c *Conn) ReadN(n int) ([]byte, int, error) {
 	if n == 0 {
 		return nil, 0, StatusPartial
 	}
-	if n != 0 && len(c.conn.Bytes()) > 0 &&
-		recordType(c.conn.Bytes()[0]) == recordTypeAlert {
+	buf, _ := c.conn.Bytes()
+	if n != 0 && len(buf) > 0 &&
+		recordType(buf[0]) == recordTypeAlert {
 		if err := c.readRecord(); err != nil {
-			return nil, 0, err // will be io.EOF on closeNotify
+			return nil, 0, err
 		}
 	}
 	return b, n, nil
