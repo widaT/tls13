@@ -987,9 +987,9 @@ func (c *Conn) Read(b []byte) (int, error) {
 	return n, nil
 }
 
-func (c *Conn) Bytes() []byte {
+func (c *Conn) Bytes() ([]byte, error) {
 	if err := c.Handshake(); err != nil {
-		return nil
+		return nil, err
 	}
 
 	c.in.Lock()
@@ -1003,23 +1003,23 @@ func (c *Conn) Bytes() []byte {
 			if err == StatusPartial {
 				break
 			}
-			return nil
+			return nil, err
 		}
 	}
 
 	b, n := c.input.Bytes()
 	if n == 0 {
-		return nil
+		return nil, nil
 	}
 
 	buf, _ := c.conn.Bytes()
 	if n != 0 && len(buf) > 0 &&
 		recordType(buf[0]) == recordTypeAlert {
 		if err := c.readRecord(); err != nil {
-			return nil
+			return nil, err
 		}
 	}
-	return b
+	return b, nil
 }
 
 func (c *Conn) ReadN(n int) ([]byte, int, error) {
