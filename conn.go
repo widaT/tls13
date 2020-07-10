@@ -638,29 +638,6 @@ func (c *Conn) retryReadRecord(expectChangeCipherSpec bool) error {
 	return c.readRecordOrCCS(expectChangeCipherSpec)
 }
 
-// atLeastReader reads from R, stopping with EOF once at least N bytes have been
-// read. It is different from an io.LimitedReader in that it doesn't cut short
-// the last Read call, and in that it considers an early EOF an error.
-type atLeastReader struct {
-	R io.Reader
-	N int64
-}
-
-func (r *atLeastReader) Read(p []byte) (int, error) {
-	if r.N <= 0 {
-		return 0, io.EOF
-	}
-	n, err := r.R.Read(p)
-	r.N -= int64(n) // won't underflow unless len(p) >= n > 9223372036854775809
-	if r.N > 0 && err == io.EOF {
-		return n, io.ErrUnexpectedEOF
-	}
-	if r.N <= 0 && err == nil {
-		return n, io.EOF
-	}
-	return n, err
-}
-
 // sendAlert sends a TLS alert message.
 func (c *Conn) sendAlertLocked(err alert) error {
 	switch err {
